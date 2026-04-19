@@ -22,6 +22,7 @@ export default function GoalsSection() {
     async function fetch() {
       const goals = await getGoals()
       goals?.forEach((goal) => dispatch(createGoalRedux(goal)))
+      
     }
     fetch()
   }, [dispatch])
@@ -41,7 +42,7 @@ export default function GoalsSection() {
     <Container>
       <TopGroup>
         <SectionHeading>Goals</SectionHeading>
-        <Icon onClick={onClick}>
+        <Icon type="button" onClick={onClick}>
           <FontAwesomeIcon icon={faPlusCircle} size="2x" className="alert" />
         </Icon>
       </TopGroup>
@@ -74,6 +75,10 @@ const TopGroup = styled.div`
   }
 `
 
-const Icon = styled.a`
+const Icon = styled.button`
   margin-left: 1rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 `

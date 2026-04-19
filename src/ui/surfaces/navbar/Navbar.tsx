@@ -59,7 +59,7 @@ const NavbarActions = styled.div`
   align-items: center;
 `
 
-const NavbarAction = styled.a`
+const NavbarAction = styled.div`
   margin: 0.8rem;
 `
 

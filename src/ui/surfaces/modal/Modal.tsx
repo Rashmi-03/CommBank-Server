@@ -14,6 +14,8 @@ export default function Modal() {
     switch (type) {
       case 'Goal':
         return <GoalManager goal={content as Goal} />
+      default:
+        return null
     }
   }
 
@@ -21,14 +23,17 @@ export default function Modal() {
 
   const onClick = (event: React.MouseEvent) => event.stopPropagation()
 
-  return <Container onClick={onClick}>{renderSwitch()}</Container>
+  return (
+    <Container onClick={onClick}>
+      {renderSwitch()}
+    </Container>
+  )
 }
 
 export const Container = styled.div`
   width: 85%;
   max-width: 1000px;
   height: 85%;
-  max-width: 1000px;
   background-color: ${({ theme }) => theme.modalBackground};
   border-radius: 2rem;
   padding: 8rem;

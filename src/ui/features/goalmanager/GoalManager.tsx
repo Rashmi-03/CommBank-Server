@@ -10,74 +10,120 @@ import { Goal } from '../../../api/types'
 import { selectGoalsMap, updateGoal as updateGoalRedux } from '../../../store/goalsSlice'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import DatePicker from '../../components/DatePicker'
+import EmojiPicker from '../../components/EmojiPicker'
 import { Theme } from '../../components/Theme'
+import AddIconButton from './AddIconButton'
+import GoalIcon from './GoalIcon'
 
 type Props = { goal: Goal }
+
 export function GoalManager(props: Props) {
   const dispatch = useAppDispatch()
+  const goal = useAppSelector(selectGoalsMap)[props.goal.id] ?? props.goal
 
-  const goal = useAppSelector(selectGoalsMap)[props.goal.id]
-
-  const [name, setName] = useState<string | null>(null)
+  const [name, setName] = useState<string>('')
   const [targetDate, setTargetDate] = useState<Date | null>(null)
-  const [targetAmount, setTargetAmount] = useState<number | null>(null)
+  const [targetAmount, setTargetAmount] = useState<string>('')
+  const [icon, setIcon] = useState<string | null>(null)
+  const [showPicker, setShowPicker] = useState(false)
 
   useEffect(() => {
-    setName(props.goal.name)
-    setTargetDate(props.goal.targetDate)
-    setTargetAmount(props.goal.targetAmount)
-  }, [
-    props.goal.id,
-    props.goal.name,
-    props.goal.targetDate,
-    props.goal.targetAmount,
-  ])
+    setName(goal.name ?? '')
+    setTargetDate(goal.targetDate ?? null)
+    setTargetAmount(
+      goal.targetAmount !== undefined && goal.targetAmount !== null
+        ? String(goal.targetAmount)
+        : ''
+    )
+    setIcon(goal.icon ?? null)
+  }, [goal])
 
-  useEffect(() => {
-    setName(goal.name)
-  }, [goal.name])
-
-  const updateNameOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const nextName = event.target.value
-    setName(nextName)
-    const updatedGoal: Goal = {
-      ...props.goal,
-      name: nextName,
-    }
+  const saveGoal = async (updatedGoal: Goal) => {
     dispatch(updateGoalRedux(updatedGoal))
-    updateGoalApi(props.goal.id, updatedGoal)
+    const ok = await updateGoalApi(updatedGoal.id, updatedGoal)
+    if (!ok) {
+      console.error('Failed to update goal')
+    }
   }
 
-  const updateTargetAmountOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const nextTargetAmount = parseFloat(event.target.value)
-    setTargetAmount(nextTargetAmount)
+  const updateNameOnBlur = async () => {
     const updatedGoal: Goal = {
-      ...props.goal,
-      name: name ?? props.goal.name,
-      targetDate: targetDate ?? props.goal.targetDate,
-      targetAmount: nextTargetAmount,
+      ...goal,
+      name: name.trim() || goal.name,
+      targetDate: targetDate ?? goal.targetDate,
+      targetAmount: Number(targetAmount) || 0,
+      icon: icon ?? undefined,
     }
-    dispatch(updateGoalRedux(updatedGoal))
-    updateGoalApi(props.goal.id, updatedGoal)
+    await saveGoal(updatedGoal)
   }
 
-  const pickDateOnChange = (date: MaterialUiPickersDate) => {
+  const updateTargetAmountOnBlur = async () => {
+    const updatedGoal: Goal = {
+      ...goal,
+      name: name.trim() || goal.name,
+      targetDate: targetDate ?? goal.targetDate,
+      targetAmount: Number(targetAmount) || 0,
+      icon: icon ?? undefined,
+    }
+    await saveGoal(updatedGoal)
+  }
+
+  const pickDateOnChange = async (date: MaterialUiPickersDate) => {
     if (date != null) {
-      setTargetDate(date)
+      const nextDate = date as Date
+      setTargetDate(nextDate)
+
       const updatedGoal: Goal = {
-        ...props.goal,
-        name: name ?? props.goal.name,
-        targetDate: date ?? props.goal.targetDate,
-        targetAmount: targetAmount ?? props.goal.targetAmount,
+        ...goal,
+        name: name.trim() || goal.name,
+        targetDate: nextDate,
+        targetAmount: Number(targetAmount) || goal.targetAmount,
+        icon: icon ?? undefined,
       }
-      dispatch(updateGoalRedux(updatedGoal))
-      updateGoalApi(props.goal.id, updatedGoal)
+
+      await saveGoal(updatedGoal)
     }
+  }
+
+  const pickEmojiOnClick = async (emoji: any, _event: React.MouseEvent) => {
+    const nextIcon = emoji.native ?? goal.icon ?? null
+    setIcon(nextIcon)
+
+    const updatedGoal: Goal = {
+      ...goal,
+      name: name.trim() || goal.name,
+      targetDate: targetDate ?? goal.targetDate,
+      targetAmount: Number(targetAmount) || goal.targetAmount,
+      icon: nextIcon ?? undefined,
+    }
+
+    await saveGoal(updatedGoal)
+    setShowPicker(false)
   }
 
   return (
     <GoalManagerContainer>
-      <NameInput value={name ?? ''} onChange={updateNameOnChange} />
+      <NameInput
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={updateNameOnBlur}
+        placeholder="Goal name"
+      />
+
+      <IconSection>
+        <AddIconButton
+          hasIcon={!!icon}
+          onClick={() => setShowPicker(!showPicker)}
+        />
+        {!!icon && (
+          <GoalIcon icon={icon} onClick={() => setShowPicker(!showPicker)} />
+        )}
+        {showPicker && (
+          <EmojiPickerContainer>
+            <EmojiPicker onClick={pickEmojiOnClick} />
+          </EmojiPickerContainer>
+        )}
+      </IconSection>
 
       <Group>
         <Field name="Target Date" icon={faCalendarAlt} />
@@ -89,21 +135,25 @@ export function GoalManager(props: Props) {
       <Group>
         <Field name="Target Amount" icon={faDollarSign} />
         <Value>
-          <StringInput value={targetAmount ?? ''} onChange={updateTargetAmountOnChange} />
+          <StringInput
+            value={targetAmount}
+            onChange={(e) => setTargetAmount(e.target.value)}
+            onBlur={updateTargetAmountOnBlur}
+          />
         </Value>
       </Group>
 
       <Group>
         <Field name="Balance" icon={faDollarSign} />
         <Value>
-          <StringValue>{props.goal.balance}</StringValue>
+          <StringValue>{goal.balance}</StringValue>
         </Value>
       </Group>
 
       <Group>
         <Field name="Date Created" icon={faCalendarAlt} />
         <Value>
-          <StringValue>{new Date(props.goal.created).toLocaleDateString()}</StringValue>
+          <StringValue>{new Date(goal.created).toLocaleDateString()}</StringValue>
         </Value>
       </Group>
     </GoalManagerContainer>
@@ -111,9 +161,6 @@ export function GoalManager(props: Props) {
 }
 
 type FieldProps = { name: string; icon: IconDefinition }
-type AddIconButtonContainerProps = { shouldShow: boolean }
-type GoalIconContainerProps = { shouldShow: boolean }
-type EmojiPickerContainerProps = { isOpen: boolean; hasIcon: boolean }
 
 const Field = (props: FieldProps) => (
   <FieldContainer>
@@ -132,6 +179,18 @@ const GoalManagerContainer = styled.div`
   position: relative;
 `
 
+const IconSection = styled.div`
+  position: relative;
+  margin: 1.25rem 0;
+`
+
+const EmojiPickerContainer = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+`
+
 const Group = styled.div`
   display: flex;
   flex-direction: row;
@@ -139,6 +198,7 @@ const Group = styled.div`
   margin-top: 1.25rem;
   margin-bottom: 1.25rem;
 `
+
 const NameInput = styled.input`
   display: flex;
   background-color: transparent;
@@ -155,6 +215,7 @@ const FieldName = styled.h1`
   color: rgba(174, 174, 174, 1);
   font-weight: normal;
 `
+
 const FieldContainer = styled.div`
   display: flex;
   flex-direction: row;
@@ -165,10 +226,12 @@ const FieldContainer = styled.div`
     color: rgba(174, 174, 174, 1);
   }
 `
+
 const StringValue = styled.h1`
   font-size: 1.8rem;
   font-weight: bold;
 `
+
 const StringInput = styled.input`
   display: flex;
   background-color: transparent;
@@ -182,3 +245,5 @@ const StringInput = styled.input`
 const Value = styled.div`
   margin-left: 2rem;
 `
+
+export default GoalManager

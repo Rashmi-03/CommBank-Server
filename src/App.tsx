@@ -1,9 +1,9 @@
 import { createTheme, ThemeProvider as ThemeProviderMui } from '@material-ui/core'
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import styled, { ThemeProvider } from 'styled-components'
 import { getUser as getUserApi } from './api/lib'
 import { useAppDispatch, useAppSelector } from './store/hooks'
-import { selectIsOpen, setIsOpen as setIsOpenRedux } from './store/modalSlice'
+import { selectContent, selectIsOpen, setIsOpen as setIsOpenRedux } from './store/modalSlice'
 import { selectMode } from './store/themeSlice'
 import { setUser as setUserRedux } from './store/userSlice'
 import { GlobalStyle } from './ui/components/GlobalStyles'
@@ -14,6 +14,7 @@ import Modal from './ui/surfaces/modal/Modal'
 export default function App() {
   const mode = useAppSelector(selectMode)
   const modalIsOpen = useAppSelector(selectIsOpen)
+  const modalContent = useAppSelector(selectContent)
   const dispatch = useAppDispatch()
 
   const muiTheme = createTheme({ palette: { type: mode } })
@@ -31,7 +32,9 @@ export default function App() {
 
   const onClick = (event: React.MouseEvent) => {
     event.stopPropagation()
-    dispatch(setIsOpenRedux(false))
+    if (modalIsOpen) {
+      dispatch(setIsOpenRedux(false))
+    }
   }
 
   return (
@@ -42,7 +45,7 @@ export default function App() {
 
           <Main />
 
-          <ModalContainer isOpen={modalIsOpen}>
+          <ModalContainer isOpen={modalIsOpen && modalContent !== null}>
             <Modal />
           </ModalContainer>
         </ThemeProvider>
@@ -65,6 +68,7 @@ const ModalContainer = styled.div<ModalContainerProps>`
   position: absolute;
   top: 0;
   left: 0;
+  z-index: var(--z-modal);
 `
 
 type ModalContainerProps = { isOpen: boolean }
